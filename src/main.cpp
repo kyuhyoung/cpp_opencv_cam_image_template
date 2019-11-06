@@ -5,6 +5,19 @@
 using namespace std;
 using namespace cv;
 
+typedef struct _Input 
+{
+    Mat im_bgr;
+    Mat im_gray;
+    
+} Input;
+
+typedef struct _Output 
+{
+    Mat im_edge;
+    
+} Output;
+
 std::string itos_formatted(int ii, int n_digit)
 {
     std::stringstream ss;
@@ -27,17 +40,28 @@ bool is_this_camera_index(const std::string& strin)
 	return 2 >= strin.size() && is_only_number(strin); 	
 }
 
-bool detect_edge_img(const std::string& strin)
+bool proc_common(Output& output, const Input& input)
 {
-    cv::Mat im_edge, im_gray = cv::imread(strin, CV_LOAD_IMAGE_GRAYSCALE);
-    Canny(im_gray, im_edge, 100.0, 300);
-    imshow("im_egge", im_edge); waitKey();    
+    Canny(input.im_gray, output.im_edge, 100.0, 300);
     return true;
 }
 
-bool detect_edge_cam(int idxCam)
+bool proc_img(const std::string& strin)
 {
-	Mat im_bgr;
+    Input input;
+    Output output;
+    input.im_gray = cv::imread(strin, CV_LOAD_IMAGE_GRAYSCALE);
+    proc_common(output, input);
+    //imwrite("im_edge.bmp", output.im_edge);
+    imshow("im_egge", output.im_edge); waitKey();    
+    return true;
+}
+
+bool proc_cam(int idxCam)
+{
+    Input input;
+    Output output;
+	//Mat im_bgr;
     Timer timer;    timer.Start();
 	//비디오 캡쳐 초기화
 	VideoCapture cap(idxCam);
@@ -49,15 +73,15 @@ bool detect_edge_cam(int idxCam)
 	while(1)
 	{
 		// 카메라로부터 캡쳐한 영상을 frame에 저장합니다.
-		cap.read(im_bgr);
-		if(im_bgr.empty()) {
+		cap.read(input.im_bgr);
+		if(input.im_bgr.empty()) {
 			cerr << "빈 영상이 캡쳐되었습니다.\n";	return false;
 		}
 		// 영상을 화면에 보여줍니다.
-        Mat im_gray, im_edge;
-        cvtColor(im_bgr, im_gray, CV_BGR2GRAY);
-        Canny(im_gray, im_edge, 100.0, 300);
-		imshow("im_edge", im_edge);
+        //Mat im_gray, im_edge;
+        cvtColor(input.im_bgr, input.im_gray, CV_BGR2GRAY);
+        proc_common(output, input);
+		imshow("im_edge", output.im_edge);
         // ESC 키를 입력하면 루프가 종료됩니다. 
 		char ch = waitKey(1);
 		if (27 == ch) break;
@@ -73,5 +97,5 @@ int main(int argc, char **argv)
     {
         cout << "Usage : " << argv[0] << " [cameraID or path to image]" << endl;	return 0;
     }     
-	return is_this_camera_index(argv[1]) ? detect_edge_cam(atoi(argv[1])) : detect_edge_img(argv[1]);
+	return is_this_camera_index(argv[1]) ? proc_cam(atoi(argv[1])) : proc_img(argv[1]);
 }
